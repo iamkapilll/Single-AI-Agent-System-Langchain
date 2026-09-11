@@ -7,3 +7,4 @@ python-dotenv
 langchainhub
 streamlit
 langchain-tavily
+langsmith
