@@ -1,58 +1,89 @@
 import os
-import certifi
 import requests
 import streamlit as st
+import certifi
 
 from dotenv import load_dotenv
-from langchain_groq import ChatGroq
-from langchain_tavily import TavilySearch
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-from langchain.tools import tool
 
+from langchain_groq import ChatGroq
+from langchain.tools import tool
+from langchain_tavily import TavilySearch
+
+from langchain_core.prompts import (
+    ChatPromptTemplate,
+    MessagesPlaceholder
+)
+
+from langchain.agents import (
+    create_tool_calling_agent,
+    AgentExecutor
+)
+
+
+# ==========================================
+# LOAD ENV VARIABLES
+# ==========================================
 
 os.environ["SSL_CERT_FILE"] = certifi.where()
+
 load_dotenv()
 
-
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 WEATHERSTACK_API_KEY = os.getenv("WEATHERSTACK_API_KEY")
+TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
 
 if not GROQ_API_KEY:
     raise ValueError("GROQ_API_KEY is missing from .env")
 
-if not TAVILY_API_KEY:
-    raise ValueError("TAVILY_API_KEY is missing from .env")
-
 if not WEATHERSTACK_API_KEY:
     raise ValueError("WEATHERSTACK_API_KEY is missing from .env")
 
+if not TAVILY_API_KEY:
+    raise ValueError("TAVILY_API_KEY is missing from .env")
 
-llm = ChatGroq(
-    model="openai/gpt-oss-20b",
-    temperature=0,
-    api_key=GROQ_API_KEY
+
+# ==========================================
+# STREAMLIT PAGE CONFIG
+# ==========================================
+
+st.set_page_config(
+    page_title="Agentic AI Assistant",
+    page_icon="🤖",
+    layout="centered"
 )
 
+st.title("🤖 Agentic AI Assistant")
+
+st.markdown("Search + Weather AI Agent using LangChain")
+
+
+# ==========================================
+# SEARCH TOOL
+# ==========================================
 
 search_tool = TavilySearch(
     max_results=2
 )
 
 
+# ==========================================
+# WEATHER TOOL
+# ==========================================
+
 @tool
 def get_weather_data(city: str) -> str:
     """
     Fetch current weather information for a city.
     """
+
     url = (
         f"https://api.weatherstack.com/current?"
         f"access_key={WEATHERSTACK_API_KEY}&query={city}"
     )
 
     response = requests.get(url)
+
     data = response.json()
 
     if "current" not in data:
@@ -66,11 +97,20 @@ def get_weather_data(city: str) -> str:
     )
 
 
-tools = [
-    search_tool,
-    get_weather_data
-]
+# ==========================================
+# LLM
+# ==========================================
 
+llm = ChatGroq(
+    model="openai/gpt-oss-20b",
+    temperature=0,
+    api_key=GROQ_API_KEY
+)
+
+
+# ==========================================
+# PROMPT
+# ==========================================
 
 prompt = ChatPromptTemplate.from_messages([
     (
@@ -93,10 +133,28 @@ prompt = ChatPromptTemplate.from_messages([
         - Give clear and accurate answers.
         """
     ),
+
     ("human", "{input}"),
-    MessagesPlaceholder(variable_name="agent_scratchpad"),
+
+    MessagesPlaceholder(
+        variable_name="agent_scratchpad"
+    )
 ])
 
+
+# ==========================================
+# TOOLS
+# ==========================================
+
+tools = [
+    search_tool,
+    get_weather_data
+]
+
+
+# ==========================================
+# CREATE AGENT
+# ==========================================
 
 agent = create_tool_calling_agent(
     llm=llm,
@@ -105,6 +163,10 @@ agent = create_tool_calling_agent(
 )
 
 
+# ==========================================
+# EXECUTOR
+# ==========================================
+
 agent_executor = AgentExecutor(
     agent=agent,
     tools=tools,
@@ -112,10 +174,42 @@ agent_executor = AgentExecutor(
 )
 
 
-response = agent_executor.invoke({
-    "input": "Find the latest news about the Rasuwa Nepal flood, how many people lost their lives and then tell me the current weather in Kathmandu."
-})
+# ==========================================
+# UI INPUT
+# ==========================================
+
+user_query = st.text_input(
+    "Enter your query:",
+    placeholder="Example: Find the latest news about Nepal and current weather in Kathmandu"
+)
 
 
-print("\n================ FINAL ANSWER ================\n")
-print(response["output"])
+# ==========================================
+# RUN AGENT
+# ==========================================
+
+if st.button("Run Agent"):
+
+    if user_query:
+
+        with st.spinner("Agent is thinking..."):
+
+            try:
+
+                response = agent_executor.invoke({
+                    "input": user_query
+                })
+
+                st.success("Response Generated")
+
+                st.markdown("## Final Response")
+
+                st.write(response["output"])
+
+            except Exception as e:
+
+                st.error(f"Error: {str(e)}")
+
+    else:
+
+        st.warning("Please enter a query")
