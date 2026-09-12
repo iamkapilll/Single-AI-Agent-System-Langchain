@@ -8,3 +8,4 @@ langchainhub
 streamlit
 langchain-tavily
 langsmith
+streamlit
