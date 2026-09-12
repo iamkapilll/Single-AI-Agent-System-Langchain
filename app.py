@@ -108,7 +108,7 @@ agent = create_tool_calling_agent(
 agent_executor = AgentExecutor(
     agent=agent,
     tools=tools,
-    verbose=False
+    verbose=True
 )
 
 
