@@ -1,11 +1,19 @@
-langchain
-langchain-community
-langchain-groq
-requests==2.31.0
-tavily-python
+# langchain
+# langchain-community
+# langchain-groq
+# requests==2.31.0
+# tavily-python
+# python-dotenv
+# langchainhub
+# streamlit
+# langchain-tavily
+# langsmith
+# streamlit
+
+certifi
+requests
+streamlit
 python-dotenv
-langchainhub
-streamlit
+langchain
+langchain-groq
 langchain-tavily
-langsmith
-streamlit
